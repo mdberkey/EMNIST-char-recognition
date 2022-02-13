@@ -10,12 +10,10 @@ from torch.utils.data import random_split
 from torchvision.utils import make_grid
 import matplotlib
 import matplotlib.pyplot as plt
-import pickle 
+import pickle
 import requests
 import zipfile
 import os, shutil
-from PIL import Image
-%matplotlib inline
 
 
 def main(setup=True, train_model=False):
@@ -32,14 +30,10 @@ def main(setup=True, train_model=False):
 
         os.remove('emnist_data.zip')
 
-
-    show_example(dataset[0])
-
-    # Set the random seed to get same random split
-
+    # show_example(dataset[0])
 
     random_seed = 50
-    torch.manual_seed(random_seed);
+    torch.manual_seed(random_seed)
 
     val_size = 50000
     train_size = len(dataset) - val_size
@@ -47,15 +41,19 @@ def main(setup=True, train_model=False):
     # Dividing the dataset into training dataset and validation dataset
     train_ds, val_ds = random_split(dataset, [train_size, val_size])
 
-    # Creating the training dataloader and validation dataloader wirh 400 batch size
-
+    # Creating the training dataloader and validation dataloader wirh 400
+    # batch size
 
     batch_size = 400
 
-    train_dl = DataLoader(train_ds, batch_size, shuffle=True, num_workers=4, pin_memory=True)
+    train_dl = DataLoader(train_ds, batch_size, shuffle=True, num_workers=4,
+                          pin_memory=True)
     val_dl = DataLoader(val_ds, batch_size * 2, num_workers=4, pin_memory=True)
 
+    #show_batch(train_dl)
+
     device = get_default_device()
+    print(device)
 
     train_dl = DeviceDataLoader(train_dl, device)
     val_dl = DeviceDataLoader(val_dl, device)
@@ -72,15 +70,30 @@ def main(setup=True, train_model=False):
     history = []
 
     if train_model:
-        print("Training the model from the begning. Expected time for completion for 8 epochs is 1 hour\n\n")
+        print(
+            "Training the model from the begning. Expected time for completion for 8 epochs is 1 hour\n\n")
         history += fit_one_cycle(epochs, max_lr, model, train_dl, val_dl,
                                  grad_clip=grad_clip,
                                  weight_decay=weight_decay,
                                  opt_func=opt_func)
     else:
         print("Using trained pratameters\n")
-        print(model.load_state_dict(torch.load('emnist-resnet9.pth', map_location=get_default_device())))
+        print(model.load_state_dict(torch.load('emnist-resnet9.pth',
+                                               map_location=get_default_device())))
         print()
+
+    # The the evaluation of the model over validation dataset
+    test_loader = DeviceDataLoader(DataLoader(test_dataset, batch_size=400),
+                                   device)
+    result = [evaluate(model, val_dl)]
+    print("The final Accuracy of model on Test Dataset:", result[0]["val_acc"])
+    print("The final Loss of model on Test Dataset:    ",
+          result[0]["val_loss"])
+
+    predict_image(dataset[1340])
+
+
+
 
 
 def download_dataset():
@@ -95,13 +108,15 @@ def download_dataset():
                          tt.ToTensor()
                      ]))
 
-    test_dataset = EMNIST(root="data/", split="byclass", download=True, train=False,
+    test_dataset = EMNIST(root="data/", split="byclass", download=True,
+                          train=False,
                           transform=tt.Compose([
                               lambda img: tt.functional.rotate(img, -90),
                               lambda img: tt.functional.hflip(img),
                               tt.ToTensor()
                           ]))
     return dataset, test_dataset
+
 
 def to_char(num):
     """
@@ -112,9 +127,9 @@ def to_char(num):
     if num < 10:
         return str(num)
     elif num < 36:
-        return chr(num+55)
+        return chr(num + 55)
     else:
-        return chr(num+61)
+        return chr(num + 61)
 
 
 def to_index(char):
@@ -130,6 +145,7 @@ def to_index(char):
     else:
         return ord(char) - 61
 
+
 def show_example(data):
     """
     Shows img and corresponding label
@@ -137,9 +153,10 @@ def show_example(data):
     :return: none
     """
     img, label = data
-    print("Label: ("+to_char(label)+")")
+    print("Label: (" + to_char(label) + ")")
     plt.imshow(img[0], cmap="gray")
     plt.show()
+
 
 def show_batch(dl):
     """
@@ -186,16 +203,17 @@ class DeviceDataLoader():
         """Number of batches"""
         return len(self.dl)
 
+
 def accuracy(outputs, labels):
     _, preds = torch.max(outputs, dim=1)
     return torch.tensor(torch.sum(preds == labels).item() / len(preds))
+
 
 @torch.no_grad()
 def evaluate(model, val_loader):
     model.eval()
     outputs = [model.validation_step(batch) for batch in val_loader]
-    return model.validation_epoch_end(outputs)\
-
+    return model.validation_epoch_end(outputs)
 
 
 class CharacterClassificationBase(nn.Module):
@@ -220,7 +238,8 @@ class CharacterClassificationBase(nn.Module):
         return {'val_loss': epoch_loss.item(), 'val_acc': epoch_acc.item()}
 
     def epoch_end(self, epoch, result):
-        print(f"Epoch [{epoch}], last_lr: {result['lrs'][-1]:.5f}, train_loss: {result['train_loss']:.4f}, val_loss: {result['val_loss']:.4f}, val_acc: {['val_acc']:.4f}")
+        print(
+            f"Epoch [{epoch}], last_lr: {result['lrs'][-1]:.5f}, train_loss: {result['train_loss']:.4f}, val_loss: {result['val_loss']:.4f}, val_acc: {['val_acc']:.4f}")
 
 
 def conv_block(in_channels, out_channels, pool=False):
@@ -270,8 +289,10 @@ def fit_one_cycle(epochs, max_lr, model, train_loader, val_loader,
     history = []
 
     optimizer = opt_func(model.parameters(), max_lr, weight_decay=weight_decay)
-    sched = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr, epochs=epochs,
-                                                steps_per_epoch=len(train_loader))
+    sched = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr,
+                                                epochs=epochs,
+                                                steps_per_epoch=len(
+                                                    train_loader))
 
     for epoch in range(epochs):
         # Training Phase
@@ -302,19 +323,21 @@ def fit_one_cycle(epochs, max_lr, model, train_loader, val_loader,
         history.append(result)
     return history
 
+
 def download_file_from_google_drive(id, destination):
     URL = "https://docs.google.com/uc?export=download"
 
     session = requests.Session()
 
-    response = session.get(URL, params = { 'id' : id }, stream = True)
+    response = session.get(URL, params={'id': id}, stream=True)
     token = get_confirm_token(response)
 
     if token:
-        params = { 'id' : id, 'confirm' : token }
-        response = session.get(URL, params = params, stream = True)
+        params = {'id': id, 'confirm': token}
+        response = session.get(URL, params=params, stream=True)
 
     save_response_content(response, destination)
+
 
 def get_confirm_token(response):
     for key, value in response.cookies.items():
@@ -323,10 +346,20 @@ def get_confirm_token(response):
 
     return None
 
+
 def save_response_content(response, destination):
     CHUNK_SIZE = 32768
 
     with open(destination, "wb") as f:
         for chunk in response.iter_content(CHUNK_SIZE):
-            if chunk: # filter out keep-alive new chunks
+            if chunk:  # filter out keep-alive new chunks
                 f.write(chunk)
+
+def predict_image(data):
+    print("Predected Character: "+ to_char(torch.max(model(to_device(data[0].unsqueeze(0), device)), dim=1)[1].item()))
+    print("Labeled:" , to_char(data[1]))
+    plt.imshow(data[0][0], cmap="gray")
+    plt.show()
+
+if __name__ == '__main__':
+    main()
