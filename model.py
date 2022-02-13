@@ -90,7 +90,7 @@ def main(setup=True, train_model=False):
     print("The final Loss of model on Test Dataset:    ",
           result[0]["val_loss"])
 
-    predict_image(dataset[1340])
+    predict_image(dataset[1340], model, device)
 
 
 
@@ -355,7 +355,7 @@ def save_response_content(response, destination):
             if chunk:  # filter out keep-alive new chunks
                 f.write(chunk)
 
-def predict_image(data):
+def predict_image(data, model, device):
     print("Predected Character: "+ to_char(torch.max(model(to_device(data[0].unsqueeze(0), device)), dim=1)[1].item()))
     print("Labeled:" , to_char(data[1]))
     plt.imshow(data[0][0], cmap="gray")
