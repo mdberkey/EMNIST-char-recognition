@@ -1,3 +1,5 @@
+import random
+
 import torch
 import torchvision
 import torch.nn as nn
@@ -16,9 +18,8 @@ import zipfile
 import os, shutil
 
 
-def main(setup=True, train_model=False):
+def main(setup=False, train_model=False):
     matplotlib.rcParams['figure.facecolor'] = '#ffffff'
-    project_name = 'emnist-char-recognition'
 
     if setup:
         dataset, test_dataset = download_dataset()
@@ -29,6 +30,8 @@ def main(setup=True, train_model=False):
             zip_ref.extractall(".")
 
         os.remove('emnist_data.zip')
+    else:
+        dataset, test_dataset = download_dataset()
 
     # show_example(dataset[0])
 
@@ -85,12 +88,12 @@ def main(setup=True, train_model=False):
     # The the evaluation of the model over validation dataset
     test_loader = DeviceDataLoader(DataLoader(test_dataset, batch_size=400),
                                    device)
-    result = [evaluate(model, val_dl)]
-    print("The final Accuracy of model on Test Dataset:", result[0]["val_acc"])
-    print("The final Loss of model on Test Dataset:    ",
-          result[0]["val_loss"])
+    #result = [evaluate(model, val_dl)]
+    #print("The final Accuracy of model on Test Dataset:", result[0]["val_acc"])
+    #print("The final Loss of model on Test Dataset:    ",
+    #          result[0]["val_loss"])
 
-    predict_image(dataset[1340], model, device)
+    predict_image(dataset[random.randint(0, 8000)], model, device)
 
 
 
